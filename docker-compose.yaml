@@ -1,0 +1,17 @@
+services:
+  api:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      - vector_db
+        # condition: service_healthy
+
+  vector_db:
+    image: chromadb/chroma
+    volumes:
+      - ./chroma_data:/data
+    ports:
+      - "${VECTOR_DB_PORT:-8001}:8001"

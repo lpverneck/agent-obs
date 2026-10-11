@@ -1,4 +1,5 @@
 __pycache__/
 .ruff_cache/
+chroma_data/
 .venv/
 .env
