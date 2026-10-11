@@ -3,7 +3,7 @@ from fastapi import FastAPI
 
 
 app = FastAPI()
-chroma_client = chromadb.HttpClient(host="localhost", port=8001)
+chroma_client = chromadb.HttpClient(host="vector-db", port=8000)
 chroma_client.heartbeat()
 
 collection = chroma_client.get_or_create_collection(name="my_collection")

@@ -6,12 +6,18 @@ services:
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:
-      - vector_db
-        # condition: service_healthy
+      vector-db:
+        condition: service_healthy
 
-  vector_db:
+  vector-db:
     image: chromadb/chroma
     volumes:
       - ./chroma_data:/data
     ports:
-      - "${VECTOR_DB_PORT:-8001}:8001"
+      - "${VECTOR_DB_PORT:-8001}:8000"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "</dev/tcp/localhost/8000"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
