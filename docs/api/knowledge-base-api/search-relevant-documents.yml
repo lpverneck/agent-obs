@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: http://0.0.0.0:8000/search
+  url: "{{baseURL}}/search"
   body:
     type: json
     data: |-

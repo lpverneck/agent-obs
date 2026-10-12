@@ -5,13 +5,13 @@ info:
 
 http:
   method: POST
-  url: http://0.0.0.0:8000/documents
+  url: "{{baseURL}}/documents"
   body:
     type: json
     data: |-
       {
-        "text": "This is a document about apples and grapes",
-        "id": "77"
+        "text": "New document content"
+        "id": "100"
       }
   auth: inherit
 

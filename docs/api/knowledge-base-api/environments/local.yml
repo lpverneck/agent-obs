@@ -1,0 +1,5 @@
+name: local
+variables:
+  - name: baseURL
+    value: http://0.0.0.0:8000
+    description: Localhost base URL.
