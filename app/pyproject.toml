@@ -10,6 +10,8 @@ dependencies = [
     "opentelemetry-api>=1.45.1",
     "opentelemetry-distro>=0.66b1",
     "opentelemetry-exporter-otlp>=1.45.1",
+    "opentelemetry-instrumentation-chromadb>=0.62.4",
+    "opentelemetry-instrumentation-httpx>=0.66b1",
     "opentelemetry-sdk>=1.45.1",
     "opentelemetry-semantic-conventions>=0.66b1",
 ]
