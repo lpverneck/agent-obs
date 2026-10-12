@@ -15,7 +15,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-project
 
 # copy application files
-COPY api.py ./
+COPY api.py schemas.py ./
 
 # expose port 8000 for the application
 EXPOSE 8000
