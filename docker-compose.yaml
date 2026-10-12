@@ -33,23 +33,6 @@ services:
     networks:
       - agent_obs_network
   #----------------------------------------------------------------------------
-  # MySQL service
-  #----------------------------------------------------------------------------
-  mysql-db:
-    image: mysql:8.4
-    container_name: agent-obs-mysql-db
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: mydatabase
-      MYSQL_USER: myuser
-      MYSQL_PASSWORD: mypassword
-    ports:
-      - "${MYSQL_PORT}:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    networks:
-      - agent_obs_network
-  #----------------------------------------------------------------------------
   # OTEL collector service
   #----------------------------------------------------------------------------
   otel-collector:
@@ -65,8 +48,6 @@ services:
       - "${OTLP_GRPC_PORT}:4317"
       - "${OTLP_HTTP_PORT}:4318"
       - "${OTEL_ZPAGES_PORT}:55679"
-    depends_on:
-      - mysql-db
     networks:
       - agent_obs_network
   #----------------------------------------------------------------------------
@@ -85,6 +66,3 @@ services:
   # ---------------------------------------------------------------------------
 networks:
   agent_obs_network:
-
-volumes:
-  mysql_data:
