@@ -21,9 +21,12 @@ services:
     image: chromadb/chroma
     container_name: agent-obs-vector-db
     volumes:
-      - ./chroma_data:/data
+      - chroma_data:/data
     ports:
       - "${VECTOR_DB_PORT:-8001}:8000"
+    environment:
+      - CHROMA_OPEN_TELEMETRY__ENDPOINT=http://otel-collector:4317/
+      - CHROMA_OPEN_TELEMETRY__SERVICE_NAME=vector-db-service
     healthcheck:
       test: ["CMD", "bash", "-c", "</dev/tcp/localhost/8000"]
       interval: 5s
@@ -64,5 +67,9 @@ services:
     networks:
       - agent_obs_network
   # ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
 networks:
   agent_obs_network:
+
+volumes:
+  chroma_data:
