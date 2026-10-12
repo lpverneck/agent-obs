@@ -1,0 +1,23 @@
+info:
+  name: add-document
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: http://0.0.0.0:8000/documents
+  body:
+    type: json
+    data: |-
+      {
+        "text": "This is a document about apples and grapes",
+        "id": "77"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
