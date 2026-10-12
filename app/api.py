@@ -1,9 +1,13 @@
 from schemas import KBDocument, SearchRequest, SearchResponse, SearchResult
 
+import logging
 import uuid
 import chromadb
 from fastapi import FastAPI
 
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 app = FastAPI()
 chroma_client = chromadb.HttpClient(host="vector-db", port=8000)
@@ -30,6 +34,9 @@ def read_root():
 
 @app.post("/search")
 def search_documents(search: SearchRequest) -> SearchResponse:
+    logger.info(
+        "search executed: query=%s n_results=%d", search.query, search.n_results
+    )
     results = collection.query(query_texts=[search.query], n_results=search.n_results)
     return SearchResponse(
         results=[
