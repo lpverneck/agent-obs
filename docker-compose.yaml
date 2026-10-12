@@ -66,6 +66,21 @@ services:
       - "${JAEGER_UI_PORT}:16686"
     networks:
       - agent_obs_network
+  #----------------------------------------------------------------------------
+  # Prometheus service
+  #----------------------------------------------------------------------------
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    container_name: agent-obs-prometheus
+    volumes:
+      - ./observability/prometheus-config.yaml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    depends_on:
+      - otel-collector
+    networks:
+      - agent_obs_network
   # ---------------------------------------------------------------------------
   # ---------------------------------------------------------------------------
 networks:
@@ -73,3 +88,4 @@ networks:
 
 volumes:
   chroma_data:
+  prometheus_data:

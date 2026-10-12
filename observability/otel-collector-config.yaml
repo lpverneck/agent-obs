@@ -16,8 +16,22 @@ exporters:
     endpoint: "http://jaeger:4317"
     tls:
       insecure: true
+  prometheus:
+    endpoint: "http://0.0.0.0:8889"
+    namespace: agent_obs
+    send_timestamps: true
+    metric_expiration: 180m
 
 service:
+  telemetry:
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: 0.0.0.0
+                port: 8888
+
   pipelines:
     traces:
       receivers: [otlp]
@@ -27,7 +41,7 @@ service:
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [debug]
+      exporters: [debug,prometheus]
 
     logs:
       receivers: [otlp]
