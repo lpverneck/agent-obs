@@ -7,6 +7,11 @@ datasources:
     access: proxy
     url: http://prometheus:9090
     isDefault: true
+    jsonData:
+      # metrics -> trace: link exemplars (trace_id) to Jaeger
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: jaeger
 
   - name: Jaeger
     type: jaeger
@@ -21,6 +26,19 @@ datasources:
         spanEndTimeShift: "5m"
         customQuery: true
         query: '{service_name=~".+"} | trace_id="$${__trace.traceId}"'
+      # trace -> metrics: query Prometheus for the span's service around the span time
+      tracesToMetrics:
+        datasourceUid: prometheus
+        spanStartTimeShift: "-5m"
+        spanEndTimeShift: "5m"
+        tags:
+          - key: service.name
+            value: job
+        queries:
+          - name: Search top distance (p95)
+            query: 'histogram_quantile(0.95, sum by (le) (rate(agent_obs_kb_search_top_distance_bucket{$$__tags}[5m])))'
+          - name: HTTP server duration (p95)
+            query: 'histogram_quantile(0.95, sum by (le) (rate(agent_obs_http_server_duration_milliseconds_bucket{$$__tags}[5m])))'
 
   - name: Loki
     type: loki
@@ -36,3 +54,13 @@ datasources:
           datasourceUid: jaeger
           url: "$${__value.raw}"
           urlDisplayLabel: View trace
+    # logs -> metrics: link the service_name label to the custom metric of that service
+    correlations:
+      - targetUID: prometheus
+        label: Search top distance (p95)
+        description: p95 of the most relevant document distance for this service
+        type: query
+        config:
+          field: service_name
+          target:
+            expr: 'histogram_quantile(0.95, sum by (le) (rate(agent_obs_kb_search_top_distance_bucket{job="$${service_name}"}[5m])))'

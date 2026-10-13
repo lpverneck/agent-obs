@@ -21,6 +21,8 @@ exporters:
     namespace: agent_obs
     send_timestamps: true
     metric_expiration: 180m
+    # exemplars (metric -> trace) are only exposed in the OpenMetrics format
+    enable_open_metrics: true
   otlp_http/loki:
     endpoint: http://loki:3100/otlp
     tls:

@@ -76,6 +76,11 @@ services:
     volumes:
       - ./observability/prometheus-config.yaml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
+    # overriding the command requires repeating the image defaults
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --enable-feature=exemplar-storage
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
     depends_on:

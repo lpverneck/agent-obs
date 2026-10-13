@@ -26,6 +26,8 @@ EXPOSE 8000
 # set the environment variable for OTEL logging auto-instrumentation
 ENV OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED=true
 ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+# export metrics every 10s (default is 60s) for faster local feedback
+ENV OTEL_METRIC_EXPORT_INTERVAL=10000
 
 # set entrypoint and default command for the container
 ENTRYPOINT ["uv", "run", "opentelemetry-instrument", "--service_name", "api-service", "fastapi", "run", "--host", "0.0.0.0"]
