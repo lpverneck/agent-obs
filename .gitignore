@@ -1,3 +1,5 @@
+.DS_Store
+docs/development/
 __pycache__/
 .ruff_cache/
 chroma_data/
