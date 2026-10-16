@@ -1,0 +1,22 @@
+info:
+  name: invoke-agent
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{baseURL}}/invoke"
+  body:
+    type: json
+    data: |-
+      {
+        "query": "quais documentos sobre o Hawaii você possui no KB ?"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
