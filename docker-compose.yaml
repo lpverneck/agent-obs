@@ -15,6 +15,26 @@ services:
     networks:
       - agent_obs_network
   #----------------------------------------------------------------------------
+  # Agent service
+  #----------------------------------------------------------------------------
+  agent:
+    build:
+      context: ./agent
+      dockerfile: Dockerfile
+    container_name: agent-obs-agent
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      LLM_MODEL: ${LLM_MODEL}
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE}
+      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS}
+    ports:
+      - "${AGENT_PORT:-8002}:8002"
+    depends_on:
+      vector-db:
+        condition: service_healthy
+    networks:
+      - agent_obs_network
+  #----------------------------------------------------------------------------
   # Vector database service
   #----------------------------------------------------------------------------
   vector-db:

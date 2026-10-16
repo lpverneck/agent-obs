@@ -32,7 +32,7 @@ answer_parser = PydanticToolsParser(tools=[Answer], first_tool_only=True)
 model = OpenAIModelProvider().create_model()
 model_with_tools = model.bind_tools(
     [*toolbox, Answer], tool_choice="any", parallel_tool_calls=False
-) # tool_choice="any" forces a tool call every turn, either search the KB or deliver the Answer
+)  # tool_choice="any" forces a tool call every turn, either search the KB or deliver the Answer
 
 # system prompt for the agent
 assistant_system_message = SystemMessage(
@@ -43,6 +43,7 @@ assistant_system_message = SystemMessage(
         "Always finish by calling `Answer`, listing the IDs of the documents you relied on."
     )
 )
+
 
 # nodes defining the agent's behavior
 def assistant(state: AgentState):

@@ -6,9 +6,7 @@ from langchain_core.tools import tool
 
 _ = load_dotenv(find_dotenv())
 
-API_BASE_URL = os.getenv(
-    "API_BASE_URL", f"http://localhost:{os.getenv('API_PORT', '8000')}"
-)
+API_BASE_URL = os.getenv("API_BASE_URL", f"http://api:{os.getenv('API_PORT', '8000')}")
 
 
 @tool
