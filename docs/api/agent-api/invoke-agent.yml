@@ -10,7 +10,9 @@ http:
     type: json
     data: |-
       {
-        "query": "quais documentos sobre o Hawaii você possui no KB ?"
+        "query": "quais documentos sobre o Hawaii você possui no KB ?",
+        "session_id": "sess-123",
+        "user_id": "user-42"
       }
   auth: inherit
 

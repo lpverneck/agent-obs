@@ -11,4 +11,5 @@ dependencies = [
     "opentelemetry-distro>=0.66b1",
     "opentelemetry-exporter-otlp>=1.45.1",
     "opentelemetry-instrumentation-chromadb>=0.62.4",
+    "opentelemetry-processor-baggage>=0.66b1",
 ]

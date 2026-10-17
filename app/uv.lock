@@ -213,6 +213,7 @@ dependencies = [
     { name = "opentelemetry-distro" },
     { name = "opentelemetry-exporter-otlp" },
     { name = "opentelemetry-instrumentation-chromadb" },
+    { name = "opentelemetry-processor-baggage" },
 ]
 
 [package.metadata]
@@ -223,6 +224,7 @@ requires-dist = [
     { name = "opentelemetry-distro", specifier = ">=0.66b1" },
     { name = "opentelemetry-exporter-otlp", specifier = ">=1.45.1" },
     { name = "opentelemetry-instrumentation-chromadb", specifier = ">=0.62.4" },
+    { name = "opentelemetry-processor-baggage", specifier = ">=0.66b1" },
 ]
 
 [[package]]
@@ -1718,6 +1720,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/73/65/162c79370dacd3bcbee52ac459905a03e048834871c9ddd8025cc8b441ec/opentelemetry_instrumentation_chromadb-0.62.4.tar.gz", hash = "sha256:ec34bd759e58c4a23dc333d664bd396c89cf3aa2bbbfb4f46f558006d93cab38", size = 143099, upload-time = "2026-09-29T10:43:59.631Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4d/cb/ba2ba5ad45361dd700f7bdb47a0105a57c1e64281bfb60725059864fa556/opentelemetry_instrumentation_chromadb-0.62.4-py3-none-any.whl", hash = "sha256:e373a70a75a3c4fa29e3739d61b44e5f60cf56ba27f06323c3fcb66321258782", size = 6324, upload-time = "2026-09-29T10:43:19.252Z" },
+]
+
+[[package]]
+name = "opentelemetry-processor-baggage"
+version = "0.66b1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-sdk" },
+    { name = "wrapt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7d/e8/6b11138881f0b1870a16891311e34d2a74fb21c8a7637e71cb61757b810d/opentelemetry_processor_baggage-0.66b1.tar.gz", hash = "sha256:200c16de37b9afae685bdc368a261d1c091ac7ef4fb892ef93129e2be5036642", size = 8794, upload-time = "2026-10-06T17:36:44.807Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b2/92/02b52c5ac72ffa4a54c496c83b99c6941090a4fd419b4666a73651222b8a/opentelemetry_processor_baggage-0.66b1-py3-none-any.whl", hash = "sha256:b43acdcb387d8934e04e8f265165b1d632ca62509c693941b31df69bf62d1fe5", size = 9467, upload-time = "2026-10-06T17:36:04.101Z" },
 ]
 
 [[package]]

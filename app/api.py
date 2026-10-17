@@ -4,11 +4,23 @@ import logging
 import uuid
 import chromadb
 from fastapi import FastAPI
-from opentelemetry import metrics
+from opentelemetry import baggage, metrics, trace
+from opentelemetry.processor.baggage import BaggageSpanProcessor
+from opentelemetry.sdk.trace import TracerProvider
 
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+# request identifiers propagated as baggage from the agent service
+BAGGAGE_KEYS = ("session.id", "user.id")
+
+# copy the baggage identifiers onto every span this service starts
+tracer_provider = trace.get_tracer_provider()
+if isinstance(tracer_provider, TracerProvider):  # only set under opentelemetry-instrument
+    tracer_provider.add_span_processor(
+        BaggageSpanProcessor(lambda key: key in BAGGAGE_KEYS)
+    )
 
 meter = metrics.get_meter(__name__)
 search_documents_counter = meter.create_counter(
@@ -44,6 +56,12 @@ def read_root():
 def search_documents(search: SearchRequest) -> SearchResponse:
     logger.info(
         "search executed: query=%s n_results=%d", search.query, search.n_results
+    )
+    # last hop of the flow: confirm the request identifiers arrived via the baggage header
+    logger.info(
+        "baggage received: session.id=%s user.id=%s",
+        baggage.get_baggage("session.id"),
+        baggage.get_baggage("user.id"),
     )
     results = collection.query(query_texts=[search.query], n_results=search.n_results)
     search_documents_counter.add(len(results["ids"][0]))

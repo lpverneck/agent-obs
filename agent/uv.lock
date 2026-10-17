@@ -19,6 +19,7 @@ dependencies = [
     { name = "opentelemetry-distro" },
     { name = "opentelemetry-exporter-otlp" },
     { name = "opentelemetry-instrumentation-genai-langchain" },
+    { name = "opentelemetry-processor-baggage" },
 ]
 
 [package.dev-dependencies]
@@ -37,6 +38,7 @@ requires-dist = [
     { name = "opentelemetry-distro", specifier = ">=0.66b1" },
     { name = "opentelemetry-exporter-otlp", specifier = ">=1.45.1" },
     { name = "opentelemetry-instrumentation-genai-langchain", specifier = ">=1.2b0" },
+    { name = "opentelemetry-processor-baggage", specifier = ">=0.66b1" },
 ]
 
 [package.metadata.requires-dev]
@@ -1429,6 +1431,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ce/bf/45a30d515effc8e4fdb95a1c6ffeababdf0292ff14819fd29a5d74a9c151/opentelemetry_instrumentation_genai_langchain-1.2b0.tar.gz", hash = "sha256:ee9ef08066a57f8cb1130932faab4d857154da28dc90286fc054e635bf7f7348", size = 94700, upload-time = "2026-09-24T16:37:55.362Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cb/62/ac0acbd8442d74d1778cc0b91b3adfb92b7a9834a29d363b44d4ce4ddd9a/opentelemetry_instrumentation_genai_langchain-1.2b0-py3-none-any.whl", hash = "sha256:ddb3cbbaa3304798a53385defc6414ae6a3ea706b3163363cd829f5bfdfbdead", size = 31602, upload-time = "2026-09-24T16:37:54.072Z" },
+]
+
+[[package]]
+name = "opentelemetry-processor-baggage"
+version = "0.66b1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-sdk" },
+    { name = "wrapt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7d/e8/6b11138881f0b1870a16891311e34d2a74fb21c8a7637e71cb61757b810d/opentelemetry_processor_baggage-0.66b1.tar.gz", hash = "sha256:200c16de37b9afae685bdc368a261d1c091ac7ef4fb892ef93129e2be5036642", size = 8794, upload-time = "2026-10-06T17:36:44.807Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b2/92/02b52c5ac72ffa4a54c496c83b99c6941090a4fd419b4666a73651222b8a/opentelemetry_processor_baggage-0.66b1-py3-none-any.whl", hash = "sha256:b43acdcb387d8934e04e8f265165b1d632ca62509c693941b31df69bf62d1fe5", size = 9467, upload-time = "2026-10-06T17:36:04.101Z" },
 ]
 
 [[package]]

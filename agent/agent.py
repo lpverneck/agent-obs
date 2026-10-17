@@ -1,12 +1,18 @@
+import logging
 from typing import Literal
 from IPython.display import Image, display
 from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from langchain_core.output_parsers import PydanticToolsParser
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode
+from opentelemetry import baggage
 from pydantic import BaseModel, Field
 from llm import OpenAIModelProvider
 from tools import toolbox
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 # pydantic data model for the final answer to the user
@@ -59,6 +65,12 @@ def respond(state: AgentState):
     # reply to the Answer tool call so the history stays valid for follow-up turns
     tool_message = ToolMessage(
         content="Answer delivered.", tool_call_id=last_message.tool_calls[0]["id"]
+    )
+    # end of the agent flow: confirm the request identifiers reached it via baggage
+    logger.info(
+        "agent flow finished: session.id=%s user.id=%s",
+        baggage.get_baggage("session.id"),
+        baggage.get_baggage("user.id"),
     )
     return {"answer": answer_parser.invoke(last_message), "messages": [tool_message]}
 
