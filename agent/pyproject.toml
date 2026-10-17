@@ -12,6 +12,7 @@ dependencies = [
     "opentelemetry-api>=1.45.1",
     "opentelemetry-distro>=0.66b1",
     "opentelemetry-exporter-otlp>=1.45.1",
+    "opentelemetry-instrumentation-genai-langchain>=1.2b0",
 ]
 
 [dependency-groups]
