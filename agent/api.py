@@ -16,7 +16,9 @@ BAGGAGE_KEYS = ("session.id", "user.id")
 
 # copy the baggage identifiers onto every span this service starts
 tracer_provider = trace.get_tracer_provider()
-if isinstance(tracer_provider, TracerProvider):  # only set under opentelemetry-instrument
+if isinstance(
+    tracer_provider, TracerProvider
+):  # only set under opentelemetry-instrument
     tracer_provider.add_span_processor(
         BaggageSpanProcessor(lambda key: key in BAGGAGE_KEYS)
     )
