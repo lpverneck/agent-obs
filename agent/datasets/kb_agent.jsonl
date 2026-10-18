@@ -1,0 +1,8 @@
+{"id": "kb-pineapple", "query": "Is there anything in the knowledge base about pineapple?", "expected_answer": "Yes, the knowledge base has a document about pineapple.", "expected_sources": ["id1"]}
+{"id": "kb-oranges", "query": "Do you have documents about oranges in the knowledge base?", "expected_answer": "Yes, there is a document about oranges.", "expected_sources": ["id2"]}
+{"id": "kb-hawaii", "query": "What do the knowledge base documents say about Hawaii?", "expected_answer": "One document is about surfers on Hawaii and another is a curiosity about the volcanoes in Hawaii areas.", "expected_sources": ["id3", "id5"]}
+{"id": "kb-volcanoes", "query": "Search the knowledge base for something about volcanoes.", "expected_answer": "There is a curiosity about the volcanoes in Hawaii areas.", "expected_sources": ["id5"]}
+{"id": "kb-surfing", "query": "Which knowledge base document talks about surfing?", "expected_answer": "The document about surfers on Hawaii.", "expected_sources": ["id3"]}
+{"id": "general-capital", "query": "What is the capital of France?", "expected_answer": "Paris.", "expected_sources": []}
+{"id": "general-math", "query": "How much is 12 times 12?", "expected_answer": "144.", "expected_sources": []}
+{"id": "general-literature", "query": "Who wrote the novel Dom Casmurro?", "expected_answer": "Machado de Assis.", "expected_sources": []}
