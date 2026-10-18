@@ -18,7 +18,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 RUN uv run opentelemetry-bootstrap -a requirements | uv add --requirement -
 
 # copy application files
-COPY api.py agent.py llm.py tools.py ./
+COPY api.py agent.py evals.py llm.py tools.py ./
 
 # expose port 8000 for the application
 EXPOSE 8002
