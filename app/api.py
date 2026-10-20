@@ -1,8 +1,11 @@
 from schemas import KBDocument, SearchRequest, SearchResponse, SearchResult
 
+import csv
 import json
 import logging
+import re
 import uuid
+from pathlib import Path
 import chromadb
 from fastapi import FastAPI
 from opentelemetry import baggage, metrics, trace
@@ -37,22 +40,40 @@ search_documents_counter = meter.create_counter(
 
 CHROMA_HOST = "vector-db"
 CHROMA_PORT = 8000
+COLLECTION_NAME = "it_support_kb"
+DATASET_PATH = Path(__file__).resolve().parents[1] / "data" / "rag_sample.csv"
+
+
+def load_knowledge_items(path: Path = DATASET_PATH) -> list[dict]:
+    """Knowledge items of the dataset, one knowledge base document each."""
+    with path.open(newline="") as file:
+        return [
+            {
+                # same id rule as agent/experiment.py, so the ground truth matches the documents
+                "id": re.sub(r"[^a-z0-9]+", "-", row["ki_topic"].lower()).strip("-"),
+                "topic": row["ki_topic"],
+                "text": row["ki_text"],
+            }
+            for row in csv.DictReader(file)
+        ]
+
 
 app = FastAPI()
 chroma_client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
 chroma_client.heartbeat()
 
-collection = chroma_client.get_or_create_collection(name="my_collection")
+collection = chroma_client.get_or_create_collection(name=COLLECTION_NAME)
 
+knowledge_items = load_knowledge_items()
 collection.upsert(
-    ids=["id1", "id2", "id3", "id4", "id5"],
-    documents=[
-        "This is a document about pineapple",
-        "This is a document about oranges",
-        "This a document about surfers on Hawaii",
-        "This is a random document about nothing in particular",
-        "This is a curiosity about the volcans in Hawaii areas",
-    ],
+    ids=[item["id"] for item in knowledge_items],
+    documents=[item["text"] for item in knowledge_items],
+    metadatas=[{"topic": item["topic"]} for item in knowledge_items],
+)
+logger.info(
+    "knowledge base seeded: collection=%s documents=%d",
+    COLLECTION_NAME,
+    len(knowledge_items),
 )
 
 

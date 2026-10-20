@@ -10,7 +10,7 @@ http:
     type: json
     data: |-
       {
-        "query": "surf",
+        "query": "reset forgotten PIN",
         "n_results": 2
       }
   auth: inherit
