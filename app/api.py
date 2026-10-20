@@ -51,7 +51,6 @@ def load_knowledge_items(path: Path = DATASET_PATH) -> list[dict]:
             {
                 # same id rule as agent/experiment.py, so the ground truth matches the documents
                 "id": re.sub(r"[^a-z0-9]+", "-", row["ki_topic"].lower()).strip("-"),
-                "topic": row["ki_topic"],
                 "text": row["ki_text"],
             }
             for row in csv.DictReader(file)
@@ -68,7 +67,6 @@ knowledge_items = load_knowledge_items()
 collection.upsert(
     ids=[item["id"] for item in knowledge_items],
     documents=[item["text"] for item in knowledge_items],
-    metadatas=[{"topic": item["topic"]} for item in knowledge_items],
 )
 logger.info(
     "knowledge base seeded: collection=%s documents=%d",
