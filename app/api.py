@@ -49,7 +49,7 @@ def load_knowledge_items(path: Path = DATASET_PATH) -> list[dict]:
     with path.open(newline="") as file:
         return [
             {
-                # same id rule as agent/experiment.py, so the ground truth matches the documents
+                # same id rule as agent/experiment.py, so the experiment case ids match the documents
                 "id": re.sub(r"[^a-z0-9]+", "-", row["ki_topic"].lower()).strip("-"),
                 "text": row["ki_text"],
             }

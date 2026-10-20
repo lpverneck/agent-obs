@@ -8,7 +8,7 @@ from opentelemetry.processor.baggage import BaggageSpanProcessor
 from opentelemetry.sdk.trace import TracerProvider
 from pydantic import BaseModel, Field
 from agent import Answer, kb_agent
-from evals import EvalSample, evaluate, retrieved_context
+from evals import evaluate
 
 
 logger = logging.getLogger(__name__)
@@ -52,21 +52,12 @@ class InvokeRequest(BaseModel):
 app = FastAPI()
 
 
-def evaluate_online(query: str, result: dict, ctx: context.Context) -> None:
-    """Score a served answer with the reference-free evaluators, in the request trace."""
+def evaluate_online(query: str, answer: str, ctx: context.Context) -> None:
+    """Score the relevance of a served answer, in the request trace."""
     # runs after the response is sent; ctx carries the request span and baggage
     with tracer.start_as_current_span("evaluate kb_agent", context=ctx):
-        sample = EvalSample(
-            query=query,
-            answer=result["answer"].answer,
-            sources=result["answer"].sources,
-            context=retrieved_context(result["messages"]),
-        )
-        scores = evaluate(sample, mode="online")
-        logger.info(
-            "online evaluation: %s",
-            ", ".join(f"{score.name}={score.value:.2f}" for score in scores),
-        )
+        score = evaluate(query, answer, mode="online")
+        logger.info("online evaluation: %s=%.2f", score.name, score.value)
 
 
 @app.post("/invoke")
@@ -96,7 +87,10 @@ def invoke_agent(request: InvokeRequest, background_tasks: BackgroundTasks) -> A
             and random.random() < EVAL_ONLINE_SAMPLE_RATE
         ):
             background_tasks.add_task(
-                evaluate_online, request.query, result, context.get_current()
+                evaluate_online,
+                request.query,
+                result["answer"].answer,
+                context.get_current(),
             )
         return result["answer"]
     finally:

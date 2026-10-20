@@ -1,6 +1,8 @@
 import argparse
+import csv
 import json
 import os
+import re
 import time
 from datetime import datetime
 from pathlib import Path
@@ -8,7 +10,7 @@ from statistics import mean
 import httpx
 from opentelemetry import propagate, trace
 from opentelemetry.trace import StatusCode
-from evals import SCORERS, EvalSample, evaluate
+from evals import evaluate
 
 
 AGENT_URL = os.getenv(
@@ -20,8 +22,24 @@ JAEGER_UI_URL = os.getenv(
 # requests from this user are skipped by the agent's online evaluation
 EVAL_USER_ID = "eval-runner"
 EXPERIMENTS_DIR = Path(__file__).parent / "experiments"
+# shared knowledge item dataset in the repo `data/` dir, also used to seed the knowledge base
+DATASET_PATH = Path(__file__).resolve().parents[1] / "data" / "rag_sample.csv"
 
 tracer = trace.get_tracer(__name__)
+
+
+def load_cases(path: Path) -> list[dict]:
+    """One case per knowledge item: its sample question, identified by the document id."""
+    with path.open(newline="") as file:
+        return [
+            {
+                # same id rule as app/api.py, so the case id is the seeded document id
+                "id": re.sub(r"[^a-z0-9]+", "-", row["ki_topic"].lower()).strip("-"),
+                # some sample questions are wrapped in literal quotes
+                "query": row["sample_question"].strip().strip('"'),
+            }
+            for row in csv.DictReader(file)
+        ]
 
 
 def run_case(case: dict, experiment_id: str) -> dict:
@@ -54,14 +72,9 @@ def run_case(case: dict, experiment_id: str) -> dict:
             response.raise_for_status()
             row["latency_s"] = round(time.perf_counter() - start, 2)
             answer = response.json()
-            sample = EvalSample(
-                query=case["query"],
-                answer=answer["answer"],
-                sources=answer["sources"],
-                expected_answer=case.get("expected_answer"),
-                expected_sources=case.get("expected_sources"),
+            score = evaluate(
+                case["query"], answer["answer"], mode="offline", **attributes
             )
-            scores = evaluate(sample, mode="offline", **attributes)
         except Exception as exc:
             span.record_exception(exc)
             span.set_status(StatusCode.ERROR, str(exc))
@@ -70,7 +83,7 @@ def run_case(case: dict, experiment_id: str) -> dict:
             **row,
             "answer": answer["answer"],
             "sources": answer["sources"],
-            "scores": {score.name: score.model_dump() for score in scores},
+            "scores": {score.name: score.model_dump()},
         }
 
 
@@ -95,8 +108,7 @@ def latest_experiment() -> dict | None:
 
 def print_report(experiment: dict, baseline: dict | None) -> None:
     rows, summary = experiment["cases"], experiment["summary"]
-    scorer_names = [scorer.__name__ for scorer in SCORERS]
-    columns = [name for name in [*scorer_names, "latency_s"] if name in summary]
+    columns = [name for name in ("answer_relevance", "latency_s") if name in summary]
     id_width = max(len(row["id"]) for row in rows) + 2
     id_width = max(id_width, len("baseline") + 2)
 
@@ -142,8 +154,8 @@ def main() -> None:
     parser.add_argument(
         "--dataset",
         type=Path,
-        default=Path(__file__).parent / "datasets" / "kb_agent.jsonl",
-        help="JSONL file with id, query, expected_answer and expected_sources.",
+        default=DATASET_PATH,
+        help="CSV file with ki_topic and sample_question columns.",
     )
     parser.add_argument(
         "--name",
@@ -152,11 +164,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    cases = [
-        json.loads(line)
-        for line in args.dataset.read_text().splitlines()
-        if line.strip()
-    ]
+    cases = load_cases(args.dataset)
     experiment_id = f"{args.name}-{datetime.now():%Y%m%d-%H%M%S}"
     baseline = latest_experiment()
 
