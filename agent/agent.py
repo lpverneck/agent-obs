@@ -17,12 +17,12 @@ logger.setLevel(logging.INFO)
 
 # pydantic data model for the final answer to the user
 class Answer(BaseModel):
-    """Final answer to the user. Call this once you are ready to respond."""
+    """Final answer to the employee. Call this once you are ready to respond."""
 
-    answer: str = Field(description="Answer to the user's question.")
+    answer: str = Field(description="Answer to the employee's question.")
     sources: list[str] = Field(
         default_factory=list,
-        description="IDs of the knowledge base documents used in the answer. Empty when the knowledge base was not used.",
+        description="IDs of the knowledge base articles used in the answer. Empty when the knowledge base was not used.",
     )
 
 
@@ -40,13 +40,16 @@ model_with_tools = model.bind_tools(
     [*toolbox, Answer], tool_choice="any", parallel_tool_calls=False
 )  # tool_choice="any" forces a tool call every turn, either search the KB or deliver the Answer
 
-# system prompt for the agent
+# system prompt for the agent: IT support assistant for the company employees
 assistant_system_message = SystemMessage(
     content=(
-        "You are a helpful assistant with access to a knowledge base. "
-        "Use `search_knowledge_base` when the question may be covered by its documents; "
-        "otherwise answer from your own knowledge without searching. "
-        "Always finish by calling `Answer`, listing the IDs of the documents you relied on."
+        "You are the company's IT Helpdesk assistant, helping employees with their devices, "
+        "accounts, software and network access.\n"
+        "- For IT questions, use `search_knowledge_base` and base your answer on the articles found; "
+        "skip it for greetings or off-topic requests.\n"
+        "- Reply in the same language as the employee's message, with clear numbered steps.\n"
+        "- Suggest contacting the IT Helpdesk when the issue is not covered or persists.\n"
+        "- Always finish by calling `Answer`, listing the IDs of the articles you relied on."
     )
 )
 

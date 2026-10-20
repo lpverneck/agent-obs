@@ -10,7 +10,7 @@ http:
     type: json
     data: |-
       {
-        "query": "quais documentos sobre o Hawaii você possui no KB ?",
+        "query": "I forgot my PIN, how do I reset it?",
         "session_id": "sess-123",
         "user_id": "user-42"
       }

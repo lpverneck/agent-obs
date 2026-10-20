@@ -10,8 +10,8 @@ http:
     type: json
     data: |-
       {
-        "text": "New document content"
-        "id": "100"
+        "id": "unlocking-a-locked-user-account",
+        "text": "**Unlocking a Locked User Account**\n\nYour company account is locked after 5 failed sign-in attempts. Follow the steps below to unlock it.\n\n**Step 1: Access the Self-Service Portal**\n\n1. Go to the company's intranet homepage and click on the IT Support link at the top right corner of the page.\n2. Click on the Self-Service tab and select Unlock Account from the drop-down menu.\n\n**Step 2: Verify Your Identity**\n\n1. Enter your company username.\n2. Answer your security question and click the Next button.\n\n**Step 3: Sign In Again**\n\n1. Sign in with your current password.\n2. If you no longer remember your password, use the Password Reset option on the same Self-Service page.\n\n**Important Notes:**\n\n* If you do not use the self-service tool, the account unlocks automatically after 30 minutes.\n* If the account is locked again right after unlocking, a device may still be using an old saved password (e.g. the email app on your mobile device). Update the password on that device.\n* If the issue persists, contact the IT Helpdesk for assistance."
       }
   auth: inherit
 

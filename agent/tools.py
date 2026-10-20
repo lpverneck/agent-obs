@@ -11,15 +11,17 @@ API_BASE_URL = os.getenv("API_BASE_URL", f"http://api:{os.getenv('API_PORT', '80
 
 @tool
 def search_knowledge_base(query: str, n_results: int = 5) -> str:
-    """Search the knowledge base for documents semantically similar to the query.
+    """Search the IT support knowledge base for articles semantically similar to the query.
 
-    Use this tool whenever you need information from the knowledge base to
-    answer the user. Results are ordered by relevance; a lower distance means
-    a closer match.
+    The knowledge base holds the company's official IT how-to guides and
+    troubleshooting articles. Use this tool for any employee question about
+    company devices, accounts, software or network access. Results are ordered
+    by relevance; a lower distance means a closer match.
 
     Args:
-        query: Natural language text describing what to look for.
-        n_results: Maximum number of documents to return, between 1 and 50.
+        query: Natural language description of the IT issue or task, e.g.
+            "reset a forgotten PIN" or "set up VPN to work from home".
+        n_results: Maximum number of articles to return, between 1 and 50.
     """
     try:
         response = httpx.post(
