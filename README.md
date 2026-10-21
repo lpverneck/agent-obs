@@ -1,16 +1,10 @@
-# Agent Obs
+# Agent Observability
 
 **An educational proof of concept for end-to-end observability and evaluation of LLM agents, built on OpenTelemetry.**
 
-![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)
-![LangGraph](https://img.shields.io/badge/LangGraph-agent-1C3C3C?logo=langchain&logoColor=white)
-![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-traces%20%C2%B7%20metrics%20%C2%B7%20logs-425CC7?logo=opentelemetry&logoColor=white)
-![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
-![Status](https://img.shields.io/badge/status-POC%20%2F%20educational-orange)
-
 An IT Helpdesk RAG agent (LangGraph + OpenAI) answers employee questions from a Chroma knowledge base. Every hop
 of a request emits OpenTelemetry **traces, metrics and logs** to a local observability stack (Jaeger, Prometheus,
-Loki, Grafana). An **evaluation pipeline** scores the answers **online** (sampled live traffic) and **offline**
+Loki, Grafana), and the same traces also reach **MLflow** for a GenAI-focused view. An **evaluation pipeline** scores the answers **online** (sampled live traffic) and **offline**
 (dataset experiments), and writes each score back as telemetry tied to the trace it evaluated.
 
 **What it demonstrates**
@@ -22,6 +16,8 @@ Loki, Grafana). An **evaluation pipeline** scores the answers **online** (sample
 - **Context propagation across services**: W3C `traceparent` and `baggage` (`session.id`, `user.id`) from the client
   through the agent to the knowledge base API.
 - **Signal correlation in Grafana**: metrics ↔ traces ↔ logs, pre-provisioned.
+- **One trace stream, two backends**: the collector fans the traces out to Jaeger and to MLflow, which renders the
+  GenAI spans as LLM, tool and agent steps with token usage, sessions and users.
 - **Online and offline evaluations** with an LLM-as-judge, using the same telemetry contract.
 
 > [!WARNING]
@@ -30,167 +26,107 @@ Loki, Grafana). An **evaluation pipeline** scores the answers **online** (sample
 
 ## Contents
 
-- [Architecture](#architecture)
-- [Workflows](#workflows)
-- [Project structure](#project-structure)
 - [Getting started](#getting-started)
+- [Project structure](#project-structure)
+- [Architecture](#architecture)
 - [Evaluation pipeline](#evaluation-pipeline)
 - [Observability with OpenTelemetry](#observability-with-opentelemetry)
 - [Dataset and credits](#dataset-and-credits)
 
-## Architecture
+## Getting started
 
-The stack runs on a single Docker network (`agent_obs_network`): two Python services, a vector database and the
-observability backends. The offline evaluation runner runs on the host, and the only external dependency is the
-OpenAI API.
+### Prerequisites
 
-| Service | Image / build | Host port(s) | `service.name` | Role |
-|---|---|---|---|---|
-| `agent` | `./agent` | `8002` | `agent-service` | FastAPI wrapper around the LangGraph agent (`POST /invoke`) and the online evaluation |
-| `api` | `./app` | `8000` | `api-service` | Knowledge base API: seeds Chroma on startup, `POST /search`, `POST /documents` |
-| `vector-db` | `chromadb/chroma` | `8001` | `vector-db-service` | Vector store with the `it_support_kb` collection; exports its own traces |
-| `otel-collector` | `otel/opentelemetry-collector-contrib:0.146.0` | `4317`, `4318`, `8888`, `8889`, `13133`, `1888`, `55679` | – | Receives OTLP and fans each signal out to its backend |
-| `jaeger` | `jaegertracing/jaeger:2.15.1` | `16686` | – | Trace storage (in memory) and UI |
-| `prometheus` | `prom/prometheus:v3.15.0` | `9090` | – | Scrapes the collector, with exemplar storage enabled |
-| `loki` | `grafana/loki:3.7.8` | `3100` | – | Log storage with native OTLP ingestion |
-| `grafana` | `grafana/grafana:13.2.3` | `3000` | – | Single pane over the three backends, with cross-signal links |
-| `eval-runner` (host) | `agent/experiment.py` | – | `eval-runner` | Offline experiment runner, started with `uv` |
+- Docker with Compose v2
+- [uv](https://docs.astral.sh/uv/), only needed for the offline experiment runner
+- An OpenAI API key
 
-```mermaid
-flowchart LR
-    subgraph host["Host"]
-        client["Client<br/>curl · Bruno"]
-        runner["eval-runner<br/>agent/experiment.py"]
-    end
+### 1. Configure
 
-    subgraph ext["External"]
-        openai["OpenAI API<br/>agent LLM + judge LLM"]
-    end
-
-    subgraph app["Application · docker compose"]
-        agent["agent<br/>agent-service<br/>FastAPI + LangGraph · :8002"]
-        api["api<br/>api-service<br/>FastAPI KB API · :8000"]
-        chroma[("vector-db<br/>Chroma · it_support_kb<br/>:8001")]
-    end
-
-    subgraph obs["Observability · docker compose"]
-        otel["otel-collector<br/>OTLP :4317 / :4318"]
-        jaeger["Jaeger<br/>traces · :16686"]
-        prom["Prometheus<br/>metrics · :9090"]
-        loki["Loki<br/>logs · :3100"]
-        grafana["Grafana<br/>:3000"]
-    end
-
-    data["data/rag_sample.csv"]
-
-    client -- "POST /invoke" --> agent
-    runner -- "POST /invoke + traceparent" --> agent
-    agent -- "POST /search + baggage" --> api
-    api -- "upsert / query" --> chroma
-    agent -- "chat completions" --> openai
-    runner -- "judge calls" --> openai
-    data -. "seed on startup" .-> api
-    data -. "test cases" .-> runner
-
-    agent -. OTLP .-> otel
-    api -. OTLP .-> otel
-    chroma -. OTLP .-> otel
-    runner -. OTLP .-> otel
-
-    otel -- "traces (OTLP)" --> jaeger
-    prom -- "scrape :8889 / :8888" --> otel
-    otel -- "logs (OTLP HTTP)" --> loki
-    grafana --> jaeger
-    grafana --> prom
-    grafana --> loki
+```bash
+cp .env.example .env
+# then set OPENAI_API_KEY in .env file
 ```
 
-Solid arrows are application calls; dotted arrows from the services are telemetry exports.
+| Variable | Default | Description |
+|---|---|---|
+| `OPENAI_API_KEY` | – | Used by the agent and by the judge |
+| `LLM_MODEL` / `LLM_TEMPERATURE` / `LLM_MAX_TOKENS` | `gpt-4o` / `0.0` / `2048` | Agent model settings |
+| `EVAL_JUDGE_MODEL` | `gpt-4o` | Judge model; falls back to `LLM_MODEL` when empty |
+| `EVAL_ONLINE_SAMPLE_RATE` | `1.0` | Share of `/invoke` requests scored online, from `0` (off) to `1` (all) |
+| `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` | `SPAN_AND_EVENT` | Record prompts and completions in GenAI telemetry (`NO_CONTENT` to disable) |
+| `MLFLOW_EXPERIMENT_ID` | `0` | MLflow experiment that receives the traces (`0` is the `Default` experiment) |
+| `*_PORT` | see `.env.example` | Host ports of every service |
 
-## Workflows
+### 2. Start the stack
 
-### Knowledge base seeding
-
-On startup, `app/api.py` reads `data/rag_sample.csv` (mounted read-only at `/data`) and upserts one document per
-knowledge item (`ki_text`) into the `it_support_kb` collection. The document id is the slug of `ki_topic`
-(e.g. `resetting-a-forgotten-pin`), the same id the offline experiment uses for its cases.
-
-### Agent request (`POST /invoke`)
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor U as Client
-    participant AG as agent-service
-    participant LLM as OpenAI
-    participant API as api-service
-    participant DB as Chroma
-    participant OC as OTel Collector
-
-    U->>AG: POST /invoke {query, session_id, user_id}
-    Note over AG: session.id / user.id set as baggage<br/>and as attributes of the server span
-    loop LangGraph: assistant and tools
-        AG->>LLM: chat (tool_choice="any")
-        LLM-->>AG: tool call
-        alt search_knowledge_base
-            AG->>API: POST /search (traceparent + baggage)
-            API->>DB: query it_support_kb
-            DB-->>API: ids, documents, distances
-            Note over API: span "retrieval it_support_kb"<br/>counter kb.search.documents
-            API-->>AG: ranked articles
-        else Answer
-            Note over AG: respond node parses the Answer
-        end
-    end
-    AG-->>U: {answer, sources}
-    opt sampled by EVAL_ONLINE_SAMPLE_RATE and user_id is not eval-runner
-        Note over AG: background task, span "evaluate kb_agent"
-        AG->>LLM: answer_relevance judge
-        LLM-->>AG: Verdict
-        Note over AG: event gen_ai.evaluation.result<br/>histogram eval.score
-    end
-    AG--)OC: traces, metrics and logs (OTLP)
-    API--)OC: traces, metrics and logs (OTLP)
+```bash
+docker compose up -d --build
 ```
 
-### Agent graph
+### 3. Talk to the agent
 
-The agent (`agent/agent.py`) is a LangGraph state graph. The model is bound to the tools **and** to the `Answer`
-schema with `tool_choice="any"`, so every turn either searches the knowledge base or delivers the final answer.
-
-```mermaid
-flowchart LR
-    S(("START")) --> A["assistant<br/>LLM with tools + Answer"]
-    A -- "route: search_knowledge_base" --> T["tools<br/>ToolNode(toolbox)"]
-    T --> A
-    A -- "route: Answer" --> R["respond<br/>parse Answer"]
-    R --> E(("END"))
+```bash
+curl -s http://localhost:8002/invoke \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "I forgot my PIN, how do I reset it?", "session_id": "sess-123", "user_id": "user-42"}'
 ```
 
-The response is the `Answer` model: `answer` (text) and `sources` (ids of the knowledge base articles used).
+`session_id` and `user_id` are optional, when present they tag every span of the request. The knowledge base API
+can also be called directly:
 
-### Offline experiment
+```bash
+# semantic search
+curl -s http://localhost:8000/search \
+  -H 'Content-Type: application/json' \
+  -d '{"query": "reset forgotten PIN", "n_results": 2}'
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant R as eval-runner
-    participant AG as agent-service
-    participant LLM as OpenAI (judge)
-    participant FS as agent/experiments/
+# add a document (the id is optional, a UUID is generated otherwise)
+curl -s http://localhost:8000/documents \
+  -H 'Content-Type: application/json' \
+  -d '{"id": "unlocking-a-locked-user-account", "text": "**Unlocking a Locked User Account** ..."}'
+```
 
-    R->>R: load cases from data/rag_sample.csv
-    R->>FS: read the latest experiment (baseline)
-    loop each case
-        Note over R: root span "eval_case {case_id}"
-        R->>AG: POST /invoke with traceparent<br/>session_id = experiment id, user_id = eval-runner
-        AG-->>R: {answer, sources} + measured latency
-        R->>LLM: answer_relevance judge
-        LLM-->>R: Verdict
-        Note over R: event gen_ai.evaluation.result<br/>histogram eval.score (eval.mode = offline)
-    end
-    R->>FS: save {name}-{timestamp}.json
-    R->>R: print report: scores, latency, deltas vs baseline, Jaeger links
+The same requests are available as [Bruno](https://www.usebruno.com/) collections in `docs/api/` (environment
+`local`).
+
+### 4. Explore the telemetry
+
+| Tool | URL | What to look at |
+|---|---|---|
+| Grafana | http://localhost:3000 | Explore with the Jaeger, Prometheus and Loki datasources, linked to each other (no login) |
+| Jaeger | http://localhost:16686 | Services `agent-service`, `api-service`, `vector-db-service`, `eval-runner` |
+| MLflow | http://localhost:5001 | Experiment `Default` → Traces: span types, inputs / outputs, token usage, session and user |
+| Prometheus | http://localhost:9090 | `agent_obs_*` series |
+| Collector zPages | http://localhost:55679/debug/tracez | Live view of the spans going through the collector |
+| Collector health | http://localhost:13133 | Health check endpoint |
+
+`docker compose logs -f otel-collector` also prints every signal received, thanks to the `debug` exporter.
+
+### 5. Run an offline experiment
+
+With the stack running:
+
+```bash
+cd agent
+uv sync
+uv run opentelemetry-instrument --service_name eval-runner python experiment.py --name baseline
+```
+
+| Option / variable | Default | Description |
+|---|---|---|
+| `--name` | `experiment` | Experiment name, e.g. the change under test; the id is `{name}-{YYYYmmdd-HHMMSS}` |
+| `--dataset` | `data/rag_sample.csv` | CSV with `ki_topic` and `sample_question` columns |
+| `AGENT_URL` | `http://localhost:${AGENT_PORT}` | Agent endpoint |
+| `JAEGER_UI_URL` | `http://localhost:${JAEGER_UI_PORT}` | Base URL of the trace links in the report |
+
+The runner loads the repository `.env` and exports OTLP to `localhost:4317`, the collector port published by Compose.
+
+### 6. Stop
+
+```bash
+docker compose down      # keep the volumes
+docker compose down -v   # also drop the Chroma, Prometheus, Loki, Grafana and MLflow data
 ```
 
 ## Project structure
@@ -222,115 +158,31 @@ agent-obs/
 │   ├── prometheus-config.yaml       # Scrape jobs for the collector (app + internal metrics)
 │   ├── loki-config.yaml             # Single-node Loki with structured metadata for OTLP
 │   └── grafana-datasources.yaml     # Prometheus, Jaeger and Loki datasources + correlations
-├── docker-compose.yaml              # The whole stack (8 services)
+├── docker-compose.yaml              # The whole stack (9 services)
 ├── .env.example                     # Ports, model and evaluation settings
 └── THIRD_PARTY_NOTICES.md           # Dataset attribution (MIT)
 ```
 
-`agent/experiments/` is created by the offline runner and is git-ignored.
+## Architecture
 
-## Getting started
+The stack runs on a single Docker network (`agent_obs_network`): two Python services, a vector database and the
+observability backends. The offline evaluation runner runs on the host, and the only external dependency is the
+OpenAI API.
 
-### Prerequisites
+| Service | Image / build | Host port(s) | `service.name` | Role |
+|---|---|---|---|---|
+| `agent` | `./agent` | `8002` | `agent-service` | FastAPI wrapper around the LangGraph agent (`POST /invoke`) and the online evaluation |
+| `api` | `./app` | `8000` | `api-service` | Knowledge base API: seeds Chroma on startup, `POST /search`, `POST /documents` |
+| `vector-db` | `chromadb/chroma` | `8001` | `vector-db-service` | Vector store with the `it_support_kb` collection; exports its own traces |
+| `otel-collector` | `otel/opentelemetry-collector-contrib:0.146.0` | `4317`, `4318`, `8888`, `8889`, `13133`, `1888`, `55679` | – | Receives OTLP and fans each signal out to its backend |
+| `jaeger` | `jaegertracing/jaeger:2.15.1` | `16686` | – | Trace storage (in memory) and UI |
+| `mlflow` | `ghcr.io/mlflow/mlflow:v3.17.2` | `5001` | – | GenAI trace store (SQLite) and UI; receives the same traces as Jaeger over OTLP/HTTP |
+| `prometheus` | `prom/prometheus:v3.15.0` | `9090` | – | Scrapes the collector, with exemplar storage enabled |
+| `loki` | `grafana/loki:3.7.8` | `3100` | – | Log storage with native OTLP ingestion |
+| `grafana` | `grafana/grafana:13.2.3` | `3000` | – | Single pane over the three backends, with cross-signal links |
+| `eval-runner` (host) | `agent/experiment.py` | – | `eval-runner` | Offline experiment runner, started with `uv` |
 
-- Docker with Compose v2
-- [uv](https://docs.astral.sh/uv/), only needed for the offline experiment runner
-- An OpenAI API key
-
-### 1. Configure
-
-```bash
-cp .env.example .env
-# then set OPENAI_API_KEY in .env
-```
-
-`docker-compose.yaml` reads its ports and settings from `.env`, so the file must exist even if you keep the defaults.
-
-| Variable | Default | Description |
-|---|---|---|
-| `OPENAI_API_KEY` | – | Used by the agent and by the judge |
-| `LLM_MODEL` / `LLM_TEMPERATURE` / `LLM_MAX_TOKENS` | `gpt-4o` / `0.0` / `2048` | Agent model settings |
-| `EVAL_JUDGE_MODEL` | `gpt-4o` | Judge model; falls back to `LLM_MODEL` when empty |
-| `EVAL_ONLINE_SAMPLE_RATE` | `1.0` | Share of `/invoke` requests scored online, from `0` (off) to `1` (all) |
-| `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT` | `SPAN_AND_EVENT` | Record prompts and completions in GenAI telemetry (`NO_CONTENT` to disable) |
-| `*_PORT` | see `.env.example` | Host ports of every service |
-
-### 2. Start the stack
-
-```bash
-docker compose up -d --build
-docker compose ps
-```
-
-`api` and `agent` wait for the Chroma healthcheck; the `api` seeds the knowledge base when it starts.
-
-### 3. Talk to the agent
-
-```bash
-curl -s http://localhost:8002/invoke \
-  -H 'Content-Type: application/json' \
-  -d '{"query": "I forgot my PIN, how do I reset it?", "session_id": "sess-123", "user_id": "user-42"}'
-```
-
-```json
-{ "answer": "1. ...", "sources": ["resetting-a-forgotten-pin"] }
-```
-
-`session_id` and `user_id` are optional; when present they tag every span of the request. The knowledge base API
-can also be called directly:
-
-```bash
-# semantic search
-curl -s http://localhost:8000/search \
-  -H 'Content-Type: application/json' \
-  -d '{"query": "reset forgotten PIN", "n_results": 2}'
-
-# add a document (the id is optional, a UUID is generated otherwise)
-curl -s http://localhost:8000/documents \
-  -H 'Content-Type: application/json' \
-  -d '{"id": "unlocking-a-locked-user-account", "text": "**Unlocking a Locked User Account** ..."}'
-```
-
-The same requests are available as [Bruno](https://www.usebruno.com/) collections in `docs/api/` (environment
-`local`), and FastAPI serves interactive docs at `http://localhost:8002/docs` and `http://localhost:8000/docs`.
-
-### 4. Explore the telemetry
-
-| Tool | URL | What to look at |
-|---|---|---|
-| Grafana | http://localhost:3000 | Explore with the Jaeger, Prometheus and Loki datasources, linked to each other (no login) |
-| Jaeger | http://localhost:16686 | Services `agent-service`, `api-service`, `vector-db-service`, `eval-runner` |
-| Prometheus | http://localhost:9090 | `agent_obs_*` series |
-| Collector zPages | http://localhost:55679/debug/tracez | Live view of the spans going through the collector |
-| Collector health | http://localhost:13133 | Health check endpoint |
-
-`docker compose logs -f otel-collector` also prints every signal received, thanks to the `debug` exporter.
-
-### 5. Run an offline experiment
-
-With the stack running:
-
-```bash
-cd agent
-uv sync
-uv run opentelemetry-instrument --service_name eval-runner python experiment.py --name baseline
-```
-
-| Option / variable | Default | Description |
-|---|---|---|
-| `--name` | `experiment` | Experiment name, e.g. the change under test; the id is `{name}-{YYYYmmdd-HHMMSS}` |
-| `--dataset` | `data/rag_sample.csv` | CSV with `ki_topic` and `sample_question` columns |
-| `AGENT_URL` | `http://localhost:${AGENT_PORT}` | Agent endpoint |
-| `JAEGER_UI_URL` | `http://localhost:${JAEGER_UI_PORT}` | Base URL of the trace links in the report |
-
-The runner loads the repository `.env` and exports OTLP to `localhost:4317`, the collector port published by Compose.
-
-### 6. Stop
-
-```bash
-docker compose down      # keep the volumes
-docker compose down -v   # also drop the Chroma, Prometheus, Loki and Grafana data
-```
+---x
 
 ## Evaluation pipeline
 
@@ -491,17 +343,26 @@ column) can only run offline.
 ### Collector pipelines
 
 All signals go through `otel-collector` (`observability/otel-collector-config.yaml`), which batches them and, besides
-the `debug` exporter, sends each one to its backend:
+the `debug` exporter, sends each one to its backend (traces go to two of them):
 
 | Pipeline | Exporter | Backend |
 |---|---|---|
 | traces | `otlp` → `jaeger:4317` | Jaeger v2, in-memory storage (up to 100,000 traces) |
+| traces | `otlp_http/mlflow` → `mlflow:5000/v1/traces`, header `x-mlflow-experiment-id` | MLflow, SQLite backend store in the `mlflow_data` volume |
 | metrics | `prometheus` on `:8889`, namespace `agent_obs`, OpenMetrics format with exemplars | Prometheus job `otel-collector-exporter` |
 | logs | `otlp_http/loki` → `loki:3100/otlp` | Loki, attributes stored as structured metadata |
 
 The collector's own metrics (`:8888`) are scraped as the `otel-collector` job. In Prometheus, metric names get the
 `agent_obs_` prefix, dots become underscores and the unit is appended (`_total` for counters), while
 `service.name` becomes the `job` label.
+
+MLflow only ingests traces over OTLP/HTTP and needs a SQL backend store. It maps the GenAI semantic conventions
+natively: `chat` spans become chat model steps, `execute_tool` spans become tool steps, `gen_ai.input.messages` /
+`gen_ai.output.messages` fill the inputs and outputs, `gen_ai.usage.*` the token counts, and `session.id` /
+`user.id` the trace session and user. The `mlflow` service lists `mlflow:5000` in `--allowed-hosts`, since its
+DNS rebinding protection would otherwise reject the collector's requests. The `gen_ai.evaluation.result` events
+are logs, so the scores stay in Loki and Prometheus; in MLflow, the evaluation shows up as the `evaluate kb_agent`
+span and the judge's chat span.
 
 ### Signal correlation in Grafana
 

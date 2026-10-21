@@ -69,6 +69,8 @@ services:
     container_name: agent-obs-otel-collector
     volumes:
       - ./observability/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+    environment:
+      MLFLOW_EXPERIMENT_ID: ${MLFLOW_EXPERIMENT_ID:-0}
     ports:
       - "${OTEL_PPROF_PORT}:1888"
       - "${OTEL_PROMETHEUS_PORT}:8888"
@@ -90,6 +92,32 @@ services:
     command: ["--config", "/jaeger/config.yaml"]
     ports:
       - "${JAEGER_UI_PORT}:16686"
+    networks:
+      - agent_obs_network
+  #----------------------------------------------------------------------------
+  # MLflow service
+  #----------------------------------------------------------------------------
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.17.2
+    container_name: agent-obs-mlflow
+    volumes:
+      - mlflow_data:/mlflow
+    command:
+      - mlflow
+      - server
+      - --host=0.0.0.0
+      - --port=5000
+      - --workers=1
+      - --backend-store-uri=sqlite:////mlflow/mlflow.db
+      - --artifacts-destination=/mlflow/artifacts
+      - --allowed-hosts=mlflow:5000,localhost:*,127.0.0.1:*
+    ports:
+      - "${MLFLOW_PORT:-5001}:5000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
     networks:
       - agent_obs_network
   #----------------------------------------------------------------------------
@@ -158,3 +186,4 @@ volumes:
   prometheus_data:
   loki_data:
   grafana_data:
+  mlflow_data:
